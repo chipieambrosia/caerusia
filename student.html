@@ -47,8 +47,23 @@ async function load(){
   if(!r.ok)throw new Error('Felhő hiba: '+r.status);
   const row=(await r.json())[0]; students=row?.data?.students||[];
   groups=[...new Set(students.map(grp))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'hu'));
-  const sel=document.getElementById('group'); sel.innerHTML=groups.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');
-  sel.onchange=render; render();
+
+  const sel=document.getElementById('group');
+  const previousGroup=sel.value || localStorage.getItem('caerusiaStudentGroup') || '';
+  sel.innerHTML=groups.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');
+
+  if(previousGroup && groups.includes(previousGroup)){
+    sel.value=previousGroup;
+  }else if(groups.length){
+    sel.value=groups[0];
+  }
+
+  sel.onchange=()=>{
+    localStorage.setItem('caerusiaStudentGroup', sel.value);
+    render();
+  };
+
+  render();
   document.getElementById('status').textContent='Utolsó felhőfrissítés: '+(row?.updated_at?new Date(row.updated_at).toLocaleString('hu-HU'):'–');
  }catch(e){document.getElementById('status').textContent='Nem sikerült betölteni az adatokat: '+e.message}
 }
