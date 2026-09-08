@@ -31,6 +31,7 @@ body.student-readonly .absent-btn{display:none!important}
 body.student-readonly .control-row{display:none!important}
 body.student-readonly .curse-actions{display:none!important}
 body.student-readonly .class-ability-btn{pointer-events:none;cursor:default;opacity:1!important}
+body.student-readonly #groupSelect{pointer-events:auto!important;opacity:1!important;cursor:pointer!important}
 body.student-readonly .readonly-banner{position:sticky;top:0;z-index:2000;background:#1c2433;border-bottom:1px solid #8b6f38;color:#f2d486;text-align:center;padding:7px 10px;font-weight:800;letter-spacing:.04em}
 body.phone-mode.student-readonly .readonly-banner{font-size:11px;padding:5px}
 body.student-readonly button:disabled{cursor:not-allowed}
@@ -63,6 +64,14 @@ body.student-readonly dialog input:disabled,body.student-readonly dialog select:
     const status=document.getElementById('status');
     if(status&&!status.textContent)status.textContent='🎓 Csak olvasható nézet';
 
+    // A csoportválasztó a diák nézetben is aktív marad.
+    const groupSelect=document.getElementById('groupSelect');
+    if(groupSelect){
+      groupSelect.disabled=false;
+      groupSelect.removeAttribute('aria-disabled');
+      groupSelect.style.pointerEvents='auto';
+    }
+
     // Kártyákon minden módosító vezérlő letiltva, a névre kattintva az adatlap továbbra is megnyitható.
     document.querySelectorAll('.absent-btn,.control-row button,.curse-actions button,.class-ability-btn').forEach(el=>{el.disabled=true;el.setAttribute('aria-disabled','true')});
 
@@ -84,6 +93,18 @@ body.student-readonly dialog input:disabled,body.student-readonly dialog select:
     const b=e.target.closest('button');
     if(!b)return;
     if(b.disabled){e.preventDefault();e.stopImmediatePropagation()}
+  },true);
+
+  // Biztonsági saját kezelő: csoportváltáskor töltsük be az új csoportot akkor is,
+  // ha a tanári oldal eredeti onchange-kezelője valamiért nem futna le.
+  document.addEventListener('change',async function(e){
+    if(e.target && e.target.id==='groupSelect'){
+      e.target.disabled=false;
+      try{
+        if(typeof loadGroupSettings==='function') await loadGroupSettings(e.target.value);
+        if(typeof loadGroup==='function') await loadGroup();
+      }catch(err){console.error('Diák nézet csoportváltási hiba',err)}
+    }
   },true);
   new MutationObserver(lockReadOnly).observe(document.documentElement,{subtree:true,childList:true});
   window.addEventListener('load',lockReadOnly);
