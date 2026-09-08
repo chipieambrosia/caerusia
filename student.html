@@ -4,125 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Caerusia – Diák nézet</title>
-<style>
-html,body{margin:0;min-height:100%;background:#0b0f17;color:#f3f4f6;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-#loading{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px;box-sizing:border-box}
-#loading strong{display:block;font-size:1.35rem;margin-bottom:8px}.muted{color:#9ca3af}
-iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#0b0f17}
-#error{max-width:720px;line-height:1.5}
-</style>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0f17}iframe{width:100%;height:100%;border:0;display:block;background:#0b0f17}</style>
 </head>
 <body>
-<div id="loading"><div><strong>Caerusia – Diák nézet</strong><span class="muted">A tanári felület szinkronizált, csak olvasható változata betöltődik…</span></div></div>
+<iframe id="app" src="./index.html" title="Caerusia – Diák nézet"></iframe>
 <script>
-(async()=>{
-  const loading=document.getElementById('loading');
-  try{
-    const r=await fetch('./index.html?studentview='+Date.now(),{cache:'no-store'});
-    if(!r.ok) throw new Error('Az index.html nem tölthető be ('+r.status+').');
-    let html=await r.text();
-
-    // A diákoldal ugyanazt a tanári felületet használja, de a felhőbe soha nem írhat.
-    html=html.replace('</head>',`<script>window.__CAERUSIA_READONLY=true;<\/script>
-<style>
-body.student-readonly .bottom{display:none!important}
-body.student-readonly #duelBtn,body.student-readonly #testResultsBtn,body.student-readonly #settingsBtn,body.student-readonly #clansBtn,body.student-readonly #historyBtn,body.student-readonly #backupBtn{display:none!important}
-body.student-readonly .absent-btn{display:none!important}
-body.student-readonly .control-row{display:none!important}
-body.student-readonly .curse-actions{display:none!important}
-body.student-readonly .class-ability-btn{pointer-events:none;cursor:default;opacity:1!important}
-body.student-readonly #groupSelect{pointer-events:auto!important;opacity:1!important;cursor:pointer!important}
-body.student-readonly .readonly-banner{position:sticky;top:0;z-index:2000;background:#1c2433;border-bottom:1px solid #8b6f38;color:#f2d486;text-align:center;padding:7px 10px;font-weight:800;letter-spacing:.04em}
-body.phone-mode.student-readonly .readonly-banner{font-size:11px;padding:5px}
-body.student-readonly button:disabled{cursor:not-allowed}
-body.student-readonly dialog input:disabled,body.student-readonly dialog select:disabled,body.student-readonly dialog textarea:disabled{opacity:.9;color:inherit;-webkit-text-fill-color:inherit}
-</style></head>`);
-
-    html=html.replace("async function pushCloudNow({verify=false}={}){", "async function pushCloudNow({verify=false}={}){if(window.__CAERUSIA_READONLY)return {ok:false,error:'read-only'};");
-    html=html.replace("function scheduleCloudSync(){", "function scheduleCloudSync(){if(window.__CAERUSIA_READONLY)return;");
-    html=html.replace("function saveDraft(){localStorage.setItem('caerusiaDraft'", "function saveDraft(){if(window.__CAERUSIA_READONLY)return;localStorage.setItem('caerusiaDraft'");
-    html=html.replace("localStorage.removeItem('caerusiaDraft');const gotCloud=await pullCloud(true);", "if(!window.__CAERUSIA_READONLY)localStorage.removeItem('caerusiaDraft');const gotCloud=await pullCloud(true);");
-
-    const readonlyScript=`
-<script>
-(function(){
-  document.title='Caerusia – Diák nézet';
-  function isCloseButton(b){
+const frame=document.getElementById('app');
+function applyStudentView(){
+  let d; try{d=frame.contentDocument}catch(e){return}
+  if(!d||!d.body)return;
+  d.title='Caerusia – Diák nézet';
+  ['duelBtn','testResultsBtn','settingsBtn','clansBtn','historyBtn','backupBtn'].forEach(id=>{
+    const e=d.getElementById(id);if(e)e.style.display='none';
+  });
+  d.querySelectorAll('.bottom,.absent-btn,.control-row,.curse-actions').forEach(e=>e.style.display='none');
+  d.querySelectorAll('.class-ability-btn').forEach(e=>{e.disabled=true;e.style.pointerEvents='none'});
+  const gs=d.getElementById('groupSelect');
+  if(gs){gs.disabled=false;gs.removeAttribute('aria-disabled');gs.style.pointerEvents='auto';gs.style.opacity='1'}
+  const brand=d.querySelector('.brand p');if(brand)brand.textContent='Fantasy English – diák nézet';
+  d.querySelectorAll('dialog input,dialog select,dialog textarea').forEach(e=>{e.disabled=true;e.readOnly=true});
+  d.querySelectorAll('dialog button').forEach(b=>{
     const t=(b.textContent||'').trim().toLowerCase();
-    return t==='bezárás'||t==='mégse'||/close/i.test(b.id||'');
-  }
-  function lockReadOnly(){
-    document.body.classList.add('student-readonly');
-    if(!document.querySelector('.readonly-banner')){
-      const banner=document.createElement('div');
-      banner.className='readonly-banner';
-      banner.textContent='🎓 DIÁK NÉZET • CSAK OLVASHATÓ • az adatok automatikusan szinkronizálódnak';
-      document.body.prepend(banner);
-    }
-    const brandP=document.querySelector('.brand p');
-    if(brandP)brandP.textContent='Fantasy English – diák nézet (csak olvasható)';
-    const status=document.getElementById('status');
-    if(status&&!status.textContent)status.textContent='🎓 Csak olvasható nézet';
-
-    // A csoportválasztó a diák nézetben is aktív marad.
-    const groupSelect=document.getElementById('groupSelect');
-    if(groupSelect){
-      groupSelect.disabled=false;
-      groupSelect.removeAttribute('aria-disabled');
-      groupSelect.style.pointerEvents='auto';
-    }
-
-    // Kártyákon minden módosító vezérlő letiltva, a névre kattintva az adatlap továbbra is megnyitható.
-    document.querySelectorAll('.absent-btn,.control-row button,.curse-actions button,.class-ability-btn').forEach(el=>{el.disabled=true;el.setAttribute('aria-disabled','true')});
-
-    // Minden felugró ablak tartalma megtekinthető, de adatmező nem szerkeszthető.
-    document.querySelectorAll('dialog input,dialog select,dialog textarea').forEach(el=>el.disabled=true);
-    // A Duel List 3 oszlopának láthatósági kapcsolói csak megjelenítést változtatnak, ezért használhatók.
-    document.querySelectorAll('#duelSheetColumnToggles input').forEach(el=>el.disabled=false);
-
-    document.querySelectorAll('dialog button').forEach(b=>{
-      if(isCloseButton(b)||b.id==='duelSheetRefresh') return;
-      b.disabled=true;
-    });
-
-    // Tanári műveleti gombok: az ablakok megnyithatók, de mentés/végrehajtás nem lehetséges.
-    ['closeLesson','xpAllBtn'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=true});
-  }
-
-  document.addEventListener('click',function(e){
-    const b=e.target.closest('button');
-    if(!b)return;
-    if(b.disabled){e.preventDefault();e.stopImmediatePropagation()}
-  },true);
-
-  // Biztonsági saját kezelő: csoportváltáskor töltsük be az új csoportot akkor is,
-  // ha a tanári oldal eredeti onchange-kezelője valamiért nem futna le.
-  document.addEventListener('change',async function(e){
-    if(e.target && e.target.id==='groupSelect'){
-      e.target.disabled=false;
-      try{
-        if(typeof loadGroupSettings==='function') await loadGroupSettings(e.target.value);
-        if(typeof loadGroup==='function') await loadGroup();
-      }catch(err){console.error('Diák nézet csoportváltási hiba',err)}
-    }
-  },true);
-  new MutationObserver(lockReadOnly).observe(document.documentElement,{subtree:true,childList:true});
-  window.addEventListener('load',lockReadOnly);
-  setInterval(lockReadOnly,1000);
-  lockReadOnly();
-})();
-<\/script>`;
-    html=html.replace('</body>',readonlyScript+'</body>');
-
-    const frame=document.createElement('iframe');
-    frame.title='Caerusia – Diák nézet';
-    frame.srcdoc=html;
-    document.body.appendChild(frame);
-    loading.remove();
-  }catch(err){
-    loading.innerHTML='<div id="error"><strong>Nem sikerült betölteni a Diák nézetet.</strong><div class="muted">'+String(err.message||err)+'</div></div>';
-  }
-})();
+    const close=t==='bezárás'||t==='mégse'||/close/i.test(b.id||'');
+    if(!close)b.disabled=true;
+  });
+}
+frame.addEventListener('load',()=>{
+  applyStudentView();
+  try{
+    const d=frame.contentDocument;
+    new MutationObserver(applyStudentView).observe(d.documentElement,{subtree:true,childList:true});
+    setInterval(applyStudentView,750);
+  }catch(e){}
+});
 </script>
 </body>
 </html>
