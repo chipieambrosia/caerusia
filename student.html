@@ -10,7 +10,7 @@ h1{margin:0;color:var(--gold);font:700 28px Georgia,serif} .sub{color:var(--mute
 select,button{font:inherit;background:#0e141e;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px 11px} button{cursor:pointer;font-weight:700} button.active{background:var(--gold);color:#1d1a13}
 main{padding:20px 24px} #status{color:var(--muted);margin-bottom:12px} .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
 .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:15px;padding:15px;cursor:pointer;box-shadow:0 9px 25px #0004}
-.card:hover{border-color:var(--gold)} .name{font-weight:800;font-size:18px}.student-head{display:flex;align-items:flex-start;gap:7px;width:100%}.student-head .student-name-wrap{flex:1;min-width:0}.class-crest{margin-left:auto;width:46px;height:46px;object-fit:contain;flex:0 0 46px} .school{color:var(--muted);font-size:12px;margin-top:2px}
+.card:hover{border-color:var(--gold)} .student-header{display:flex;align-items:flex-start;gap:7px;width:100%}.student-header-main{flex:1;min-width:0}.class-crest{margin-left:auto;width:46px;height:46px;object-fit:contain;flex:0 0 46px}.name{font-weight:800;font-size:18px} .school{color:var(--muted);font-size:12px;margin-top:2px}
 .badges{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0} .badge{font-size:10px;border:1px solid var(--line);border-radius:999px;padding:4px 7px} .class{color:var(--gold)}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:11px 0} .stat{background:#111824;border-radius:10px;padding:8px;text-align:center} .stat strong{display:block;font-size:19px} .stat span{font-size:10px;color:var(--muted)}
 .progress{height:6px;background:#0f141d;border-radius:999px;overflow:hidden} .progress div{height:100%;background:linear-gradient(90deg,var(--purple),var(--gold))}
@@ -18,7 +18,7 @@ main{padding:20px 24px} #status{color:var(--muted);margin-bottom:12px} .grid{dis
 dialog{width:min(760px,95vw);max-height:88vh;overflow:auto;border:1px solid var(--line);border-radius:16px;background:#171d28;color:var(--text);padding:18px} dialog::backdrop{background:#000b}
 .dhead{display:flex;justify-content:space-between;gap:10px;align-items:start} .dhead h2{margin:0} .ability{border-left:4px solid var(--gold);background:#222a38;padding:11px;border-radius:8px;margin:14px 0;line-height:1.45}
 .skill{border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0} .skill p{margin:4px 0 0;color:var(--muted);font-size:12px} .skill small{color:var(--gold)} .close{background:#303a4c}
-.list .grid{grid-template-columns:1fr} .list .card{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:10px;align-items:center}
+.list .grid{grid-template-columns:1fr} .list .card{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:10px;align-items:center}.list .student-header{grid-column:1}.list .stats{grid-column:2;margin:0}.list .card>div:last-child{grid-column:3}
 @media(max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}} @media(max-width:700px){header{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.list .card{display:block}}
 </style></head>
 <body>
@@ -57,7 +57,30 @@ function render(){
  const arr=students.filter(s=>grp(s)===g).sort((a,b)=>(a.name||'').localeCompare(b.name||'','hu'));
  document.getElementById('grid').innerHTML=arr.map(s=>{
   const lv=level(s.xp),next=LEVELS.find(x=>x[0]===lv+1)?.[1],prev=LEVELS.find(x=>x[0]===lv)?.[1]||0,pct=next?Math.max(0,Math.min(100,((s.xp-prev)/(next-prev))*100)):100;
-  return `<div class="card" data-key="${esc(s.key)}"><div class="student-head"><div class="student-name-wrap"><div class="name">${esc(s.name)}</div><div class="school">${esc(s.school_class||'')}</div></div>${CLASS_ICONS[s.character_class]?`<img class="class-crest" src="${CLASS_ICONS[s.character_class]}" alt="${esc(s.character_class)} címer">`:``}</div><div class="badges"><span class="badge class">${esc(s.character_class||'No Class')}</span><span class="badge">${esc(s.clan||'No Clan')}</span><span class="badge">Lv ${lv}</span></div></div><div class="stats"><div class="stat"><strong>${s.xp||0}</strong><span>XP</span></div><div class="stat"><strong>${s.mp||0}</strong><span>MP</span></div><div class="stat"><strong>${s.cp||0}</strong><span>CP</span></div><div class="stat"><strong>${s.gc||0}</strong><span>Gold</span></div></div><div><div class="progress"><div style="width:${pct}%"></div></div><div class="mini">${next?`Következő szint: ${next} XP`:'Maximum szint'}</div></div></div>`;
+  return `<div class="card" data-key="${esc(s.key)}">
+  <div class="student-header">
+    <div class="student-header-main">
+      <div class="name">${esc(s.name)}</div>
+      <div class="school">${esc(s.school_class||'')}</div>
+      <div class="badges">
+        <span class="badge class">${esc(s.character_class||'No Class')}</span>
+        <span class="badge">${esc(s.clan||'No Clan')}</span>
+        <span class="badge">Lv ${lv}</span>
+      </div>
+    </div>
+    ${CLASS_ICONS[s.character_class] ? `<img class="class-crest" src="${CLASS_ICONS[s.character_class]}" alt="${esc(s.character_class)} címer">` : ``}
+  </div>
+  <div class="stats">
+    <div class="stat"><strong>${s.xp||0}</strong><span>XP</span></div>
+    <div class="stat"><strong>${s.mp||0}</strong><span>MP</span></div>
+    <div class="stat"><strong>${s.cp||0}</strong><span>CP</span></div>
+    <div class="stat"><strong>${s.gc||0}</strong><span>Gold</span></div>
+  </div>
+  <div>
+    <div class="progress"><div style="width:${pct}%"></div></div>
+    <div class="mini">${next?`Következő szint: ${next} XP`:'Maximum szint'}</div>
+  </div>
+</div>`;
  }).join('');
  document.querySelectorAll('.card').forEach(c=>c.onclick=()=>openProfile(c.dataset.key));
 }
