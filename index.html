@@ -24,6 +24,7 @@ body.phone-mode header{position:sticky;top:0;padding:8px 10px;display:block}body
 @media(max-width:760px){.duel-layout{grid-template-columns:1fr}.duel-sheet-scroll{max-height:45vh}.duel-grid{grid-template-columns:1fr}.duel-vs{font-size:20px}header{padding:12px;align-items:flex-end}.top-actions{justify-content:flex-end}main{padding:12px 10px 230px}.student-grid{grid-template-columns:1fr}.student-grid.list-view .student-card{display:block}.student-grid.list-view .student-card>.stats,.student-grid.list-view .student-card>.progress,.student-grid.list-view .student-card>.mini,.student-grid.list-view .student-card>.control-row,.student-grid.list-view .student-card>.skills-mini{display:grid}.student-grid.list-view .student-card>.mini{display:block}.student-grid.list-view .student-card>.skills-mini{display:flex}.bottom{grid-template-columns:1fr 1fr}.bottom label:nth-child(3),.bottom label:nth-child(4),.bottom .primary,.bottom .status{grid-column:1/3}.form-grid{grid-template-columns:1fr 1fr}.clan-row{grid-template-columns:1fr 70px 70px}.clan-row .wide{grid-column:1/4}}
 
 .settings-section{border:1px solid var(--line);border-radius:12px;padding:12px;margin:12px 0;background:#121925}.settings-section h3{margin:0 0 10px;color:var(--gold)}.settings-section>summary{cursor:pointer;color:var(--gold);font-size:1.05rem;user-select:none}.settings-section>summary::marker{color:var(--gold)}.settings-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.settings-pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}.settings-table{width:100%;border-collapse:collapse;margin-top:8px}.settings-table th,.settings-table td{border-bottom:1px solid var(--line);padding:7px;text-align:left}.settings-table input{width:90px}.test-toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:12px 0}.test-row{display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(260px,1.2fr) minmax(280px,1.3fr) 120px;gap:10px;align-items:center;border:1px solid var(--line);background:#121925;border-radius:12px;padding:10px;margin:7px 0}.grade-buttons{display:flex;gap:5px;flex-wrap:wrap}.grade-btn,.effect-btn{border:1px solid var(--line);background:#283246;color:white;border-radius:8px;padding:7px 9px;font-weight:700}.grade-btn.active,.effect-btn.active{background:var(--gold);color:#1d1a13}.effect-buttons{display:flex;gap:5px;flex-wrap:wrap}.result-box{text-align:right;font-weight:800}.result-box small{display:block;color:var(--muted);font-weight:500}.switchline{display:flex;gap:7px;align-items:center}.test-mode-btn{border:1px solid var(--line);background:#303a4c;color:white;border-radius:8px;padding:9px 12px;font-weight:700}.test-mode-btn.active{background:var(--gold);color:#1d1a13}
+.test-import-log-button{background:#cdb6ff!important;color:#26143f!important;border:1px solid #e4d7ff!important;font-weight:800;margin-top:10px}.test-import-log-button:hover{background:#e1d2ff!important}
 .test-sheet-import{border:1px solid var(--line);background:#111824;border-radius:12px;padding:10px 12px;margin:12px 0}
 .test-sheet-linkrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
 .test-sheet-linkrow label{min-width:0}.test-sheet-linkrow input{width:100%}
@@ -156,6 +157,10 @@ body.phone-mode header{position:sticky;top:0;padding:8px 10px;display:block}body
   <div class="dialog-actions"><button class="ghost" id="resetStudentsCancelBtn">Mégse</button><button class="danger" id="confirmResetStudentsBtn">Reset students</button></div>
 </dialog>
 
+  <dialog id="testImportLogDialog" style="width:min(760px,94vw)">
+    <div class="dialog-head"><div><h2>Korábbi Excel / CSV importálások</h2><p>Fájlnév, csoport, időpont és az importált jegyek száma.</p></div><button class="ghost" id="closeTestImportLogBtn" type="button">Bezárás</button></div>
+    <div id="testImportLogContent" style="max-height:60vh;overflow:auto"></div>
+  </dialog>
 <dialog id="testResultsDialog" style="width:min(1180px,97vw)"><div class="dialog-head"><div><h2>Add test results</h2><p>Válaszd ki a jegyet és az esetleges módosítókat. A Wizard XP-je automatikusan duplázódik.</p></div><button class="ghost" id="testResultsCloseBtn">Bezárás</button></div>
   <div class="test-sheet-import">
     <div class="test-sheet-linkrow" style="margin-bottom:10px">
@@ -170,16 +175,8 @@ body.phone-mode header{position:sticky;top:0;padding:8px 10px;display:block}body
       <button class="ghost" id="loadWorkbookSheetBtn" type="button">Munkalap betöltése</button>
     </div>
     <div style="font-size:12px;color:var(--muted);margin:4px 0 10px">CSV-nél azonnal betölti az adatokat. Excelnél (.xlsx/.xls) kiválaszthatod a munkalapot.</div>
-    <details style="margin-top:6px"><summary style="cursor:pointer;color:var(--muted)">Google Sheet import (opcionális)</summary>
-    <div style="margin-top:10px">
-    <div class="test-sheet-linkrow">
-      <label>Google Sheet link / Publish to web CSV link
-        <input id="testSheetUrl" type="url" placeholder="Normál Google Sheet link vagy Közzététel az interneten kapott pubhtml/CSV link">
-      </label>
-      <button class="ghost" id="loadTestSheetBtn" type="button">Sheet beolvasása</button>
-    </div>
-    <div id="testSheetStatus" class="test-sheet-status">Normál Sheet link vagy a Közzététel az interneten által adott pubhtml link is használható; a program automatikusan CSV-vé alakítja.</div>
-    </div></details>
+    <div id="testSheetStatus" class="test-sheet-status">Válassz fájlt, majd jelöld ki a jegy és a név/becenév oszlopát.</div>
+    <button id="showTestImportLogBtn" type="button" class="test-import-log-button">Korábbi importálások</button>
     <div id="testSheetMap" class="test-sheet-map">
       <label>Jegyet tartalmazó oszlop<select id="testSheetGradeColumn"><option value="">— válaszd ki —</option></select></label>
       <label>Név / becenév oszlop<select id="testSheetNameColumn"><option value="">— válaszd ki —</option></select></label>
@@ -302,57 +299,7 @@ function guessTestSheetColumn(headers,kind){
   let i=keys.findIndex(h=>wanted.some(w=>h===w||h.includes(w)));
   return i>=0?i:(kind==='grade'?0:Math.min(1,Math.max(0,headers.length-1)));
 }
-function loadGoogleSheetViaJsonp(info){
-  return new Promise((resolve,reject)=>{
-    const cb='caerusiaSheetCb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
-    const script=document.createElement('script');
-    const timer=setTimeout(()=>cleanup(new Error('A Google Sheet nem válaszolt időben.')),12000);
-    function cleanup(err,data){
-      clearTimeout(timer);try{script.remove()}catch(_){}
-      try{delete window[cb]}catch(_){window[cb]=undefined}
-      err?reject(err):resolve(data);
-    }
-    window[cb]=(resp)=>{
-      try{
-        if(!resp||resp.status==='error')throw new Error(resp?.errors?.[0]?.detailed_message||resp?.errors?.[0]?.message||'Google Sheet lekérdezési hiba.');
-        const table=resp.table;
-        const headers=(table.cols||[]).map((c,i)=>c.label||c.id||`Oszlop ${i+1}`);
-        const rows=[headers,...(table.rows||[]).map(r=>(r.c||[]).map(c=>c?.v??''))];
-        cleanup(null,rows);
-      }catch(e){cleanup(e)}
-    };
-    script.onerror=()=>cleanup(new Error('A Google Sheet nem tölthető be. Ellenőrizd a megosztást.'));
-    script.src=`https://docs.google.com/spreadsheets/d/${encodeURIComponent(info.id)}/gviz/tq?gid=${encodeURIComponent(info.gid)}&tqx=responseHandler:${encodeURIComponent(cb)}`;
-    document.head.appendChild(script);
-  });
-}
-function isPublishedSheetUrl(link){
-  try{
-    const u=new URL(link);
-    return /docs\.google\.com$/i.test(u.hostname) &&
-      /\/spreadsheets\/d\/e\//i.test(u.pathname) &&
-      (/\/pubhtml$/i.test(u.pathname) || /\/pub$/i.test(u.pathname));
-  }catch(_){return false}
-}
-function publishedCsvUrl(link){
-  const u=new URL(link);
-  // A Google "Közzététel az interneten" alapból pubhtml linket ad.
-  // Ebből automatikusan elkészítjük a tényleges CSV végpontot.
-  u.pathname=u.pathname.replace(/\/pubhtml$/i,'/pub');
-  u.searchParams.set('output','csv');
-  // gid és single paramétereket megtartjuk, így ugyanazt a lapfület olvassuk.
-  return u.toString();
-}
-async function loadPublishedCsv(link){
-  const csvUrl=publishedCsvUrl(link);
-  const r=await fetch(csvUrl,{cache:'no-store',redirect:'follow'});
-  if(!r.ok)throw new Error(`HTTP ${r.status}`);
-  const csv=await r.text();
-  if(!csv.trim())throw new Error('A közzétett CSV üres.');
-  return parseCsv(csv);
-}
-
-let testWorkbook=null;
+let testWorkbook=null,testImportFileName='';
 function showTestImportColumns(rows,sourceLabel){
   testSheetRows=rows||[];
   const headers=testSheetRows[0]||[];
@@ -368,11 +315,12 @@ async function loadTestResultFile(){
   const status=$('#testSheetStatus');
   $('#testSheetMap').classList.remove('show');
   $('#testWorkbookRow').classList.remove('show');
-  testSheetRows=[];testWorkbook=null;
+  testSheetRows=[];testWorkbook=null;testImportFileName='';
   if(!file){status.textContent='Válassz ki egy CSV, XLSX vagy XLS fájlt.';return}
   status.textContent=`${file.name} beolvasása…`;
   try{
     const ext=(file.name.split('.').pop()||'').toLowerCase();
+    testImportFileName=file.name;
     if(ext==='csv'){
       const txt=await file.text();
       showTestImportColumns(parseCsv(txt),file.name);
@@ -402,28 +350,23 @@ function loadSelectedWorkbookSheet(){
   const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
   showTestImportColumns(rows,`Excel • ${name}`);
 }
-async function loadTestSheet(){
-  const link=$('#testSheetUrl').value.trim(),status=$('#testSheetStatus'),map=$('#testSheetMap');
-  map.classList.remove('show');testSheetRows=[];
-  if(!link){status.textContent='Illessz be egy normál Google Sheet vagy Publish to web CSV linket.';return}
-  status.textContent='Google Sheet betöltése…';
-  try{
-    if(isPublishedSheetUrl(link)){
-      testSheetRows=await loadPublishedCsv(link);
-    }else{
-      const info=parseGoogleSheetLink(link);
-      if(!info)throw new Error('A link nem felismerhető Google Sheet vagy Publish to web CSV linkként.');
-      // Normál Google Sheet link: a gid alapján a kiválasztott lapfület olvassuk.
-      testSheetRows=await loadGoogleSheetViaJsonp(info);
-    }
-    showTestImportColumns(testSheetRows,'Google Sheet');
-  }catch(e){
-    console.error('Test Sheet import hiba',e);
-    status.textContent=`Nem sikerült betölteni a Sheetet: ${e?.message||e}. Normál linknél ellenőrizd a megosztást/lapfület; ha a böngésző blokkolja, használd a Közzététel az interneten → CSV linket.`;
-  }
+async function recordTestFileImport(entry){
+  const record=await get('settings','testFileImportLog');
+  const items=Array.isArray(record?.value)?record.value:[];
+  items.push(entry);
+  await put('settings',{key:'testFileImportLog',value:items});
+}
+async function showTestImportLog(){
+  const record=await get('settings','testFileImportLog');
+  const items=Array.isArray(record?.value)?record.value:[];
+  const content=$('#testImportLogContent');
+  content.innerHTML=items.length?
+    `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Időpont</th><th>Fájlnév</th><th>Csoport</th><th>Munkalap</th><th>Jegyek</th></tr></thead><tbody>${items.slice().reverse().map(x=>`<tr><td>${escapeHtml(new Date(x.timestamp).toLocaleString('hu-HU'))}</td><td>${escapeHtml(x.filename)}</td><td>${escapeHtml(x.group)}</td><td>${escapeHtml(x.worksheet||'')}</td><td>${Number(x.matched)||0}</td></tr>`).join('')}</tbody></table></div>`:
+    '<p>Még nem történt sikeres Excel/CSV jegyimportálás.</p>';
+  $('#testImportLogDialog').showModal();
 }
 function importTestGrades(){
-  if(testSheetRows.length<2){$('#testSheetStatus').textContent='Előbb olvasd be a Google Sheetet.';return}
+  if(testSheetRows.length<2){$('#testSheetStatus').textContent='Előbb olvass be egy Excel vagy CSV fájlt.';return}
   const nv=$('#testSheetNameColumn').value,gv=$('#testSheetGradeColumn').value;
   if(nv===''||gv===''){$('#testSheetStatus').textContent='Válaszd ki a név/becenév és a jegy oszlopát.';return}
   const ni=Number(nv),gi=Number(gv);
@@ -464,6 +407,11 @@ function importTestGrades(){
   if(ambiguous)msg+=` ${ambiguous} név több tanulóra is illeszkedett, ezeket kihagytam.`;
   if(invalid)msg+=` ${invalid} sorban nem volt érvényes 1–5 jegy.`;
   $('#testSheetStatus').textContent=msg;
+  if(matched>0&&testImportFileName){
+    void recordTestFileImport({filename:testImportFileName,group:$('#groupSelect').value,
+      timestamp:new Date().toISOString(),matched,worksheet:testWorkbook?$('#testWorkbookSheet').value:'CSV'})
+      .catch(e=>{console.error('Importnapló mentési hiba',e);$('#testSheetStatus').textContent+=' Figyelem: a napló mentése nem sikerült.'});
+  }
 }
 function renderTestRows(){const sorted=[...students].filter(s=>!absentStudents.has(s.key)).sort((a,b)=>a.name.localeCompare(b.name,'hu'));$('#testRows').innerHTML=sorted.map(s=>{const x=testSelections[s.key]||{grade:null,mandolin:false,song:false,gold:false};testSelections[s.key]=x;const r=calcTestReward(s,x);return `<div class="test-row" data-key="${encodeURIComponent(s.key)}"><div><strong>${s.name}</strong>${s.character_class?` <span class="badge class-badge">${s.character_class}</span>`:''}</div><div class="grade-buttons">${[1,2,3,4,5].map(g=>`<button type="button" class="grade-btn ${x.grade===g?'active':''}" data-grade="${g}">${g}</button>`).join('')}</div><div class="effect-buttons"><button type="button" class="effect-btn ${x.mandolin?'active':''}" data-effect="mandolin">Mandolin +10% XP</button><button type="button" class="effect-btn ${x.song?'active':''}" data-effect="song">Song +100% XP</button><button type="button" class="effect-btn ${x.gold?'active':''}" data-effect="gold">Touch of Gold +100%</button></div><div class="result-box">${r.xp} XP<br>${r.gold} Gold<small>${x.grade?`${testMode}% • ${x.grade}-es`:'nincs jegy'}</small></div></div>`}).join('');document.querySelectorAll('.test-row').forEach(row=>{const key=decodeURIComponent(row.dataset.key);row.querySelectorAll('[data-grade]').forEach(b=>b.onclick=()=>{testSelections[key].grade=parseInt(b.dataset.grade);renderTestRows()});row.querySelectorAll('[data-effect]').forEach(b=>b.onclick=()=>{const e=b.dataset.effect;testSelections[key][e]=!testSelections[key][e];renderTestRows()})})}
 async function sendTestResults(){let count=0;for(const s of students){if(absentStudents.has(s.key))continue;const sel=testSelections[s.key];if(!sel?.grade)continue;const r=calcTestReward(s,sel);s.xp=round1(s.xp+r.xp);s.gc=round1(s.gc+r.gold);logGroup(`${s.name}: ${testMode}% test, jegy ${sel.grade} → +${r.xp} XP, +${r.gold} Gold${s.character_class==='Wizard'?' [Wizard ×2 XP]':''}${sel.mandolin?' [Mandolin]':''}${sel.song?' [Song of Paradise]':''}${sel.gold?' [Touch of Gold]':''}`,'TEST');count++}if(!count){alert('Nincs kiválasztott jegy.');return}await saveCurrentStudents();saveDraft();render();testResultsDialog.close();statusEl.textContent=`✓ ${count} teszteredmény hozzáadva`;testSelections={}}
@@ -581,7 +529,7 @@ async function showDuelLog(){const group=$('#groupSelect').value;const items=(aw
 async function showGroupLog(){const group=$('#groupSelect').value;const items=(await all('groupLogs')).filter(x=>x.group===group).sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''));$('#groupLogGroupLabel').textContent=group;$('#groupLogList').innerHTML=items.length?items.map(x=>{const entries=Array.isArray(x.entries)?x.entries:[x.message||''];return `<div class="history-item"><strong>${new Date(x.timestamp).toLocaleString('hu-HU')}</strong> <small style="color:var(--muted)">${x.category||'LESSON'}</small>${x.angel?`<div><small>Angel: ${x.angel}</small></div>`:''}<pre>${entries.filter(Boolean).map(e=>'• '+e).join('\n')}${x.notes?`\n\nÓrai jegyzet: ${x.notes}`:''}</pre></div>`}).join(''):'<p>Még nincs mentett óra ebben a csoportban.</p>';groupLogDialog.showModal()}
 $('#duelLogBtn').onclick=showDuelLog;$('#duelLogCloseBtn').onclick=()=>duelLogDialog.close();$('#groupLogBtn').onclick=showGroupLog;$('#groupLogCloseBtn').onclick=()=>groupLogDialog.close();
 $('#loadTestFileBtn').onclick=loadTestResultFile;$('#loadWorkbookSheetBtn').onclick=loadSelectedWorkbookSheet;$('#testWorkbookSheet').onchange=loadSelectedWorkbookSheet;
-$('#loadTestSheetBtn').onclick=loadTestSheet;$('#importTestGradesBtn').onclick=importTestGrades;
+$('#importTestGradesBtn').onclick=importTestGrades;$('#showTestImportLogBtn').onclick=showTestImportLog;$('#closeTestImportLogBtn').onclick=()=>$('#testImportLogDialog').close();
 $('#testResultsBtn').onclick=()=>{testSelections={};testMode=100;$('#test100Btn').classList.add('active');$('#test200Btn').classList.remove('active');renderTestRows();testResultsDialog.showModal()};$('#testResultsCloseBtn').onclick=()=>testResultsDialog.close();$('#test100Btn').onclick=()=>{testMode=100;$('#test100Btn').classList.add('active');$('#test200Btn').classList.remove('active');renderTestRows()};$('#test200Btn').onclick=()=>{testMode=200;$('#test200Btn').classList.add('active');$('#test100Btn').classList.remove('active');renderTestRows()};$('#sendTestResultsBtn').onclick=sendTestResults;
 
 $('#clansBtn').onclick=async()=>{await renderClans();clansDialog.showModal()};
