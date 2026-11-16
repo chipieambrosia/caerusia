@@ -518,46 +518,87 @@ $('#classSelect').onchange=renderStudentInfo;['#xpInput','#mpInput'].forEach(id=
 function lessonXpEarned(s){const start=lessonStartXP[s.key] ?? (s.xp||0);return Math.max(0,round1((s.xp||0)-start))}
 function markEndAbilityUsed(s,message){awardPetFood(s);usedEndAbilities.add(s.key);delete abilityRolls[s.key];if(message)logGroup(message,'CLASS_ABILITY');saveDraft();render()}
 function abilityHeader(s){return `<div class="ability-heading"><img src="${CLASS_ICONS[s.character_class]||''}" alt="${s.character_class} címer"><div><strong>${s.character_class}</strong><div class="ability-info">${CLASSES[s.character_class].ability}</div></div></div>`}
-function openEndAbility(key){const s=studentByKey(key);if(!s||!s.character_class)return;if(absentStudents.has(s.key)){alert('A hiányzó tanuló ezen az órán inaktív.');return}if(cursedStudents.has(s.key)){alert('The Cursed állapotban a Class Ability nem aktiválható.');return}if(usedEndAbilities.has(s.key)){alert('Ezt az End of lesson Class Ability-t ezen az órán már használtad.');return}activeId=s.key;$('#classAbilityTitle').textContent='End of lesson Class Ability';$('#classAbilityStudent').textContent=s.name;const body=$('#classAbilityBody');const xpStep=num('#xpStep',rewardSettings.xpStep),mpStep=num('#mpStep',rewardSettings.mpStep);if(s.character_class==='Warrior'){s.gc=round1(s.gc+1);markEndAbilityUsed(s,`${s.name}: Warrior End of lesson Ability → +1 Gold`);saveCurrentStudents();statusEl.textContent=`✓ ${s.name}: +1 Gold`;return}else if(s.character_class==='Wizard'){const cost=round1(mpStep*.5);if(s.mp<cost){logGroup(`${s.name}: Wizard End of lesson Ability → sikertelen, nincs elég MP (${cost} MP szükséges)`,'CLASS_ABILITY');statusEl.textContent=`${s.name}: nincs elég MP (${cost} MP szükséges)`;return}s.mp=round1(s.mp-cost);s.xp=round1(s.xp+xpStep);markEndAbilityUsed(s,`${s.name}: Wizard End of lesson Ability → -${cost} MP, +${xpStep} XP`);saveCurrentStudents();statusEl.textContent=`✓ ${s.name}: -${cost} MP, +${xpStep} XP`;return}else if(s.character_class==='Bard'){const others=[...students].filter(t=>t.key!==s.key&&!absentStudents.has(t.key)).sort((a,b)=>a.name.localeCompare(b.name,'hu'));body.innerHTML=`${abilityHeader(s)}<div class="ability-summary">Válassz egy másik diákot. Ő <strong>+${xpStep} XP</strong>-t kap.</div><div class="ability-choice-grid">${others.map(t=>`<button type="button" data-bard-target="${t.key}">${t.name}</button>`).join('')}</div>`;body.querySelectorAll('[data-bard-target]').forEach(b=>b.onclick=async()=>{const t=studentByKey(b.dataset.bardTarget);t.xp=round1(t.xp+xpStep);markEndAbilityUsed(s,`${s.name}: Bard End of lesson Ability → ${t.name} +${xpStep} XP`);await saveCurrentStudents();classAbilityDialog.close();statusEl.textContent=`✓ ${s.name} → ${t.name}: +${xpStep} XP`})}else if(s.character_class==='Adventurer'||s.character_class==='Warsmith'){renderDiceAbility(s)}classAbilityDialog.showModal()}
+function openEndAbility(key){
+ const s=studentByKey(key);
+ if(!s||!s.character_class)return;
+ if(absentStudents.has(s.key)){alert('Absent students are inactive for this lesson.');return}
+ if(cursedStudents.has(s.key)){alert('The Class Ability is unavailable while The Cursed is active.');return}
+ if(usedEndAbilities.has(s.key)){alert('This End of Lesson Class Ability has already been used this lesson.');return}
+ activeId=s.key;
+ $('#classAbilityTitle').textContent='End of lesson Class Ability';
+ $('#classAbilityStudent').textContent=s.name;
+ const body=$('#classAbilityBody');
+ const xpStep=num('#xpStep',rewardSettings.xpStep),mpStep=num('#mpStep',rewardSettings.mpStep);
+ if(s.character_class==='Warrior'){
+  s.gc=round1(s.gc+1);
+  markEndAbilityUsed(s,`${s.name}: Warrior End of lesson Ability → +1 Gold`);
+  saveCurrentStudents();statusEl.textContent=`✓ ${s.name}: +1 Gold`;return
+ }else if(s.character_class==='Wizard'){
+  const cost=round1(mpStep*.5);
+  if(s.mp<cost){
+   logGroup(`${s.name}: Wizard End of lesson Ability → failed: not enough MP (${cost} MP required)`,'CLASS_ABILITY');
+   statusEl.textContent=`${s.name}: not enough MP (${cost} MP required)`;return
+  }
+  s.mp=round1(s.mp-cost);s.xp=round1(s.xp+xpStep);
+  markEndAbilityUsed(s,`${s.name}: Wizard End of lesson Ability → -${cost} MP, +${xpStep} XP`);
+  saveCurrentStudents();statusEl.textContent=`✓ ${s.name}: -${cost} MP, +${xpStep} XP`;return
+ }else if(s.character_class==='Bard'){
+  const others=[...students].filter(t=>t.key!==s.key&&!absentStudents.has(t.key)).sort((a,b)=>a.name.localeCompare(b.name,'hu'));
+  body.innerHTML=`${abilityHeader(s)}<div class="ability-summary">Choose another student. They will receive <strong>+${xpStep} XP</strong>.</div><div class="ability-choice-grid">${others.map(t=>`<button type="button" data-bard-target="${t.key}">${t.name}</button>`).join('')}</div>`;
+  body.querySelectorAll('[data-bard-target]').forEach(b=>b.onclick=async()=>{
+   const t=studentByKey(b.dataset.bardTarget);t.xp=round1(t.xp+xpStep);
+   markEndAbilityUsed(s,`${s.name}: Bard End of lesson Ability → ${t.name} +${xpStep} XP`);
+   await saveCurrentStudents();classAbilityDialog.close();statusEl.textContent=`✓ ${s.name} → ${t.name}: +${xpStep} XP`
+  })
+ }else if(s.character_class==='Adventurer'||s.character_class==='Warsmith'){renderDiceAbility(s)}
+ classAbilityDialog.showModal()
+}
 function renderDiceAbility(s){
  const isAdv=s.character_class==='Adventurer',target=isAdv?4:5,roll=abilityRolls[s.key],
  earned=lessonXpEarned(s),bonus=round1(earned*.10),body=$('#classAbilityBody'),face=roll||'–';
  body.innerHTML=`${abilityHeader(s)}<div class="dice-wrap">
- <div class="ability-summary">${isAdv?`Órán szerzett XP: <strong>${earned} XP</strong> • siker esetén bónusz: <strong>+${bonus} XP</strong>`:'A Warsmith ability használatához nem szükséges, hogy az órán XP-t szerezzen. Siker esetén: <strong>random Common Magic Item</strong>'}</div>
- <div class="dice-face">🎲</div><div class="dice-result" id="abilityDiceResult">Dobás: ${face}</div>
- <button class="primary" id="rollAbilityDie" ${roll?'disabled':''}>d6 dobás</button>
- ${roll?`<p class="ability-info">A dobás eredménye: <strong>${roll}</strong>. Sikerhez ${target}+ szükséges.</p>
+ <div class="ability-summary">${isAdv?`XP earned this lesson: <strong>${earned} XP</strong> • success bonus: <strong>+${bonus} XP</strong>`:'No lesson XP is required to use the Warsmith ability. On success: <strong>random Common Magic Item</strong>'}</div>
+ <div class="dice-face">🎲</div><div class="dice-result" id="abilityDiceResult">Roll: ${face}</div>
+ <button class="primary" id="rollAbilityDie" ${roll?'disabled':''}>Roll d6</button>
+ ${roll?`<p class="ability-info">Result: <strong>${roll}</strong>. A ${target}+ is required for success.</p>
  <div class="dice-outcome-actions">
- <button type="button" class="primary success-green" id="claimDiceSuccess" ${roll<target?'disabled':''}>✓ Sikeres dobás</button>
- <button type="button" class="primary dice-failure" id="claimDiceFailure" ${roll>=target?'disabled':''}>✕ Sikertelen dobás</button>
- </div>`:''}</div>`;
+ <button type="button" class="primary success-green" id="claimDiceSuccess" ${roll<target?'disabled':''}>✓ Confirm Successful Roll</button>
+ <button type="button" class="primary dice-failure" id="claimDiceFailure" ${roll>=target?'disabled':''}>✕ Record Failed Roll</button>
+ </div>`:'<div class="dice-outcome-actions"><button type="button" class="primary success-green" id="claimPhysicalSuccess">✓ Accept Physical Die Roll as Success</button></div>'}</div>`;
  const rb=$('#rollAbilityDie');
  if(rb&&!rb.disabled)rb.onclick=()=>{
   rb.disabled=true;const out=$('#abilityDiceResult');
-  const spin=setInterval(()=>{out.textContent='Dobás: '+(Math.floor(Math.random()*6)+1)},90);
+  const spin=setInterval(()=>{out.textContent='Roll: '+(Math.floor(Math.random()*6)+1)},90);
   setTimeout(()=>{clearInterval(spin);const r=Math.floor(Math.random()*6)+1;abilityRolls[s.key]=r;saveDraft();renderDiceAbility(s)},1500)
  };
  const fail=$('#claimDiceFailure');
  if(fail)fail.onclick=()=>{
   const r=abilityRolls[s.key];if(!r||r>=target||usedEndAbilities.has(s.key))return;
-  markEndAbilityUsed(s,`${s.name}: ${s.character_class} End of lesson Ability → d6: ${r}, sikertelen`);
-  statusEl.textContent=`${s.name}: d6 = ${r} – sikertelen, nincs jutalom`;
-  classAbilityDialog.close();
+  markEndAbilityUsed(s,`${s.name}: ${s.character_class} End of lesson Ability → d6: ${r}, failed`);
+  statusEl.textContent=`${s.name}: d6 = ${r} – failed, no reward`;
+  classAbilityDialog.close()
  };
- const success=$('#claimDiceSuccess');
- if(success)success.onclick=async()=>{
-  const r=abilityRolls[s.key];if(!r||r<target||usedEndAbilities.has(s.key))return;
+ const completeSuccess=async(source)=>{
+  const r=abilityRolls[s.key];
+  if(usedEndAbilities.has(s.key))return;
+  if(source==='app'&&(!r||r<target))return;
+  if(source==='physical'&&r)return;
+  const outcome=source==='physical'?'physical die: success accepted':`d6: ${r}, successful`;
   if(isAdv){
    const nowEarned=lessonXpEarned(s),add=round1(nowEarned*.10);
    s.xp=round1(s.xp+add);
-   markEndAbilityUsed(s,`${s.name}: Adventurer End of lesson Ability → d6: ${r}, +${add} XP (10% az órán szerzett ${nowEarned} XP-ből)`);
-   await saveCurrentStudents();statusEl.textContent=`✓ ${s.name}: +${add} XP`;
+   markEndAbilityUsed(s,`${s.name}: Adventurer End of lesson Ability → ${outcome}, +${add} XP (10% of ${nowEarned} lesson XP)`);
+   await saveCurrentStudents();statusEl.textContent=`✓ ${s.name}: +${add} XP`
   }else{
-   markEndAbilityUsed(s,`${s.name}: Warsmith End of lesson Ability → d6: ${r}, random Common Magic Item jár`);
-   statusEl.textContent=`✓ ${s.name}: Common Magic Item jár`;
+   markEndAbilityUsed(s,`${s.name}: Warsmith End of lesson Ability → ${outcome}, random Common Magic Item awarded`);
+   statusEl.textContent=`✓ ${s.name}: Common Magic Item awarded`
   }
-  classAbilityDialog.close();
+  classAbilityDialog.close()
  };
+ const success=$('#claimDiceSuccess');
+ if(success)success.onclick=()=>completeSuccess('app');
+ const physicalSuccess=$('#claimPhysicalSuccess');
+ if(physicalSuccess)physicalSuccess.onclick=()=>completeSuccess('physical')
 }
 $('#classAbilityCloseBtn').onclick=()=>classAbilityDialog.close();
 async function saveCurrentStudents(){for(const s of students)await put('students',s)}
