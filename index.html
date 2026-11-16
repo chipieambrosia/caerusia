@@ -961,15 +961,18 @@ async function renderUploadedTests(){
  const covered=new Set(batches.flatMap(x=>Array.isArray(x.entries)?x.entries:[]));
  const items=batches.map(x=>({timestamp:x.timestamp,title:x.title||`${x.mode||''}% test`,count:x.count||x.results?.length||0,entries:x.entries||[]}));
  for(const lesson of lessons.filter(x=>x.group===group)){
-  const byMode=new Map();
+  const byTest=new Map();
   for(const line of lesson.events||[]){
    if(!/\b\d+% test, grade\b/i.test(line)||covered.has(line))continue;
-   const mode=(line.match(/\b(\d+)% test, grade\b/i)||[])[1]||'';
-   if(!byMode.has(mode))byMode.set(mode,[]);
-   byMode.get(mode).push(line);
+   const match=line.match(/^\[([^\]]+)\].*?\b(\d+)% test, grade\b/i);
+   if(!match)continue;
+   const time=match[1],mode=match[2],key=`${time}| ${mode}`;
+   if(!byTest.has(key))byTest.set(key,[]);
+   byTest.get(key).push(line);
   }
-  for(const [mode,entries] of byMode){
-   items.push({timestamp:lesson.closed_at,title:`${mode}% test (older record)`,count:entries.length,entries});
+  for(const [key,entries] of byTest){
+   const [time,mode]=key.split('|');
+   items.push({timestamp:lesson.closed_at,title:`${mode}% test · ${time.trim()}`,count:entries.length,entries});
   }
  }
  items.sort((a,b)=>String(b.timestamp||'').localeCompare(String(a.timestamp||'')));
