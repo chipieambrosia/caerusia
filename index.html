@@ -967,7 +967,7 @@ async function renderUploadedTests(){
   const byTest=new Map();
   for(const line of entries||[]){
    const normalized=normalize(line);
-   const match=normalized.match(/\b(\d+)% test, grade\b/i);
+   const match=normalized.match(/\b(\d+)% test,\s*(?:grade|jegy)\b/i);
    if(!match||coveredByBatches.has(normalized))continue;
    if(source==='groupLog'&&lessonEntryTexts.has(normalized))continue;
    const loggedTime=(String(line).match(/^\[([^\]]+)\]/)||[])[1];
