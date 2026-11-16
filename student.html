@@ -4,7 +4,7 @@
 <style>
 :root{--bg:#10131a;--panel:#1a2130;--panel2:#222b3b;--text:#f5f2e8;--muted:#aab4c4;--gold:#d8b45c;--line:#344057;--purple:#8e75d6}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#29344b,#10131a 44%);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif}
-header{position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:18px;padding:16px 24px;background:#10131af2;border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:18px;padding:16px 24px;background:#10131af2;border-bottom:1px solid var(--line)}.group-photo-header{width:100px;height:56px;object-fit:cover;border:1px solid var(--line);border-radius:9px;background:var(--panel);box-shadow:0 3px 10px #0004}.group-photo-header[hidden]{display:none!important}
 h1{margin:0;color:var(--gold);font:700 28px Georgia,serif} .sub{color:var(--muted);font-size:12px;margin-top:3px}
 .controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap} label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:12px}
 select,button{font:inherit;background:#0e141e;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px 11px} button{cursor:pointer;font-weight:700} button.active{background:var(--gold);color:#1d1a13}
@@ -77,7 +77,7 @@ button:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
 </style></head>
 <body>
 <header><div><h1>Caerusia</h1><div class="sub">Fantasy English – Student View • Read Only</div></div>
-<div class="controls"><label>Group<select id="group"></select></label><button id="tiles" class="active">▦ Tiles</button><button id="list">☰ List</button><button id="themeToggle" class="theme-btn" type="button">☀ Light</button></div></header>
+<div class="controls"><img id="groupPhotoHeader" class="group-photo-header" alt="Group photo" hidden><label>Group<select id="group"></select></label><button id="tiles" class="active">▦ Tiles</button><button id="list">☰ List</button><button id="themeToggle" class="theme-btn" type="button">☀ Light</button></div></header>
 <main id="main"><div id="status">Loading data…</div><div id="grid" class="grid"></div></main>
 <dialog id="profile"><div class="dhead"><div><h2 id="pn"></h2><div id="ps" class="school"></div></div><button class="close" onclick="profile.close()">Close</button></div><div id="pb"></div></dialog>
 <script>
@@ -91,19 +91,20 @@ Warrior:{ability:"Warriors gain double Experience Points for Duels. End of lesso
 Bard:{ability:"Bards gain +10% Manna Points in Divine Blessing. End of lesson: choose another student and give them the current lesson XP value.",skills:[[1,"Give +1%","Give someone +1% in a test.",150],[3,"Assist","Assist someone participating in a Duel by giving the correct answer.",30],[5,"Erase","Erase a Curse Point for someone.",200],[7,"Voyage","All your Clanmates gain 150 Experience Points.",200],[8,"Song of Paradise","All your Clanmates gain +15% on a test.",200]]},
 Warsmith:{ability:"Warsmiths gain double Experience Points for Quest. End of lesson: roll a d6; on 5+ gain a random Common Magic Item.",skills:[[1,"More Material","Gain +1 Material for a Quest; once for each Quest when doing several.",50],[3,"Money Maker","Get X Gold.","X×10"],[5,"Get Magic Item","Gain a Magic Item of maximum Very Rare quality.",250],[7,"Feels like Home","Look at a previously written handwritten A5 note for 5 minutes during a test.",200],[8,"Stolen Intelligence","Gain a copy of next day's test.",200]]}
 };
-let students=[],groups=[];
+let students=[],groups=[],appSettings=[];
 function level(xp){let l=1;for(const [n,t] of LEVELS)if((xp||0)>=t)l=n;return l}
 function grp(s){return s.group || (s.key||'').split('|')[0] || 'Csoport'}
+function updateGroupPhoto(){const g=document.getElementById('group').value,record=appSettings.find(x=>x.key==='groupPhoto|'+g),src=record?.value?.dataUrl||'',img=document.getElementById('groupPhotoHeader');img.src=src;img.hidden=!src}
 function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function load(){
  try{
   const r=await fetch(URL+'/rest/v1/app_state?id=eq.main&select=data,updated_at',{headers:{apikey:KEY,Authorization:'Bearer '+KEY},cache:'no-store'});
   if(!r.ok)throw new Error('Cloud error: '+r.status);
-  const row=(await r.json())[0]; students=row?.data?.students||[];
+  const row=(await r.json())[0]; students=row?.data?.students||[];appSettings=row?.data?.settings||[];
   groups=[...new Set(students.map(grp))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'hu'));
   const sel=document.getElementById('group'); const oldGroup=sel.value; sel.innerHTML=groups.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');
   if(groups.includes(oldGroup))sel.value=oldGroup;
-  sel.onchange=render; render();
+  sel.onchange=()=>{updateGroupPhoto();render()};updateGroupPhoto();render();
   document.getElementById('status').textContent='Last cloud update: '+(row?.updated_at?new Date(row.updated_at).toLocaleString('en-GB'):'–');
  }catch(e){document.getElementById('status').textContent='Unable to load data: '+e.message}
 }
