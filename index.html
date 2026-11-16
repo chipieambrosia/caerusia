@@ -957,28 +957,36 @@ $('#resetStudentsBtn').onclick=openResetStudentsDialog;$('#resetStudentsCloseBtn
 $('#settingsBtn').onclick=()=>{renderSettingsDialog();settingsDialog.showModal();void renderUploadedTests()};$('#settingsCloseBtn').onclick=()=>settingsDialog.close();$('#saveSettingsBtn').onclick=saveRewardSettings;$('#refreshUploadedTestsBtn').onclick=renderUploadedTests;
 async function renderUploadedTests(){
  const group=$('#groupSelect').value,[logs,lessons]=await Promise.all([all('groupLogs'),all('lessons')]);
+ const normalize=line=>String(line||'').replace(/^\[[^\]]+\]\s*/,'').trim();
  const batches=logs.filter(x=>x.group===group&&x.category==='TEST_BATCH');
- const covered=new Set(batches.flatMap(x=>Array.isArray(x.entries)?x.entries:[]));
+ const coveredByBatches=new Set(batches.flatMap(x=>(x.entries||[]).map(normalize)));
  const items=batches.map(x=>({timestamp:x.timestamp,title:x.title||`${x.mode||''}% test`,count:x.count||x.results?.length||0,entries:x.entries||[]}));
- for(const lesson of lessons.filter(x=>x.group===group)){
+ const groupLessons=lessons.filter(x=>x.group===group);
+ const lessonEntryTexts=new Set(groupLessons.flatMap(x=>(x.events||[]).map(normalize)));
+ function collectLegacy(record,entries,source){
   const byTest=new Map();
-  for(const line of lesson.events||[]){
-   if(!/\b\d+% test, grade\b/i.test(line)||covered.has(line))continue;
-   const match=line.match(/^\[([^\]]+)\].*?\b(\d+)% test, grade\b/i);
-   if(!match)continue;
-   const time=match[1],mode=match[2],key=`${time}| ${mode}`;
+  for(const line of entries||[]){
+   const normalized=normalize(line);
+   const match=normalized.match(/\b(\d+)% test, grade\b/i);
+   if(!match||coveredByBatches.has(normalized))continue;
+   if(source==='groupLog'&&lessonEntryTexts.has(normalized))continue;
+   const loggedTime=(String(line).match(/^\[([^\]]+)\]/)||[])[1];
+   const time=loggedTime||new Date(record.timestamp||record.closed_at).toLocaleTimeString('hu-HU');
+   const mode=match[1],key=`${time}| ${mode}`;
    if(!byTest.has(key))byTest.set(key,[]);
    byTest.get(key).push(line);
   }
-  for(const [key,entries] of byTest){
+  for(const [key,testEntries] of byTest){
    const [time,mode]=key.split('|');
-   items.push({timestamp:lesson.closed_at,title:`${mode}% test · ${time.trim()}`,count:entries.length,entries});
+   items.push({timestamp:record.timestamp||record.closed_at,title:`${mode}% test · ${time.trim()}`,count:testEntries.length,entries:testEntries});
   }
  }
+ for(const lesson of groupLessons)collectLegacy(lesson,lesson.events,'lesson');
+ for(const log of logs.filter(x=>x.group===group&&x.category!=='TEST_BATCH'))collectLegacy(log,log.entries||[log.message],'groupLog');
  items.sort((a,b)=>String(b.timestamp||'').localeCompare(String(a.timestamp||'')));
  $('#uploadedTestsList').innerHTML=items.length?items.map(x=>{
   const date=x.timestamp?new Date(x.timestamp).toLocaleString('hu-HU'):'';
-  const details=(x.entries||[]).map(line=>line.replace(/^\[[^\]]+\]\s*/,'' )).join('\n');
+  const details=(x.entries||[]).map(line=>normalize(line)).join('\n');
   return `<details class="history-item"><summary>${escapeHtml(date)} • ${escapeHtml(x.title)} • ${x.count} student${x.count===1?'':'s'}</summary><pre>${escapeHtml(details)}</pre></details>`;
  }).join(''):'<p>No test results have been recorded for this group yet.</p>';
 }
