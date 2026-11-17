@@ -361,6 +361,10 @@ body:not(.light-theme) button[style*="background: #d4ad3d"]{color:#17130a!import
   </dialog>
 <dialog id="testResultsDialog" style="width:min(1180px,97vw)"><div class="dialog-head"><div><h2>Add test results</h2><p>Choose the grade and optional modifiers. Wizard XP is automatically doubled.</p></div><button class="ghost" id="testResultsCloseBtn">Close</button></div>
   <div class="test-sheet-import">
+    <div class="test-name-field" style="margin:0 0 10px">
+      <label for="testNameInput">Test name (optional)</label>
+      <input id="testNameInput" type="text" maxlength="120" placeholder="e.g. Unit 6 test or Oral test" style="width:100%">
+    </div>
     <div class="test-sheet-linkrow" style="margin-bottom:10px">
       <label>Excel / CSV file
         <input id="testResultFile" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
@@ -902,8 +906,8 @@ async function sendTestResults(){
  }
  if(!count){alert('No grade selected.');return}
  await saveCurrentStudents();
- await put('groupLogs',{group:$('#groupSelect').value,timestamp:new Date().toISOString(),category:'TEST_BATCH',title:`${testMode}% test`,mode:testMode,filename:testImportFileName||'',count,results:batchResults,entries:batchEntries});
- saveDraft();render();testResultsDialog.close();statusEl.textContent=`✓ ${count} test results added`;testSelections={}
+ await put('groupLogs',{group:$('#groupSelect').value,timestamp:new Date().toISOString(),category:'TEST_BATCH',title:`${testMode}% test`,mode:testMode,filename:testImportFileName||'',testName:$('#testNameInput').value.trim(),count,results:batchResults,entries:batchEntries});
+ saveDraft();render();testResultsDialog.close();$('#testNameInput').value='';statusEl.textContent=`✓ ${count} test results added`;testSelections={}
 }
 function openResetStudentsDialog(){const g=$('#groupSelect').value;$('#resetGroupLabel').textContent=`Current group: ${g} (${students.length} tanuló)`;$('#resetXp').checked=true;$('#resetMp').checked=true;$('#resetCp').checked=true;$('#resetGc').checked=true;$('#keepClass').checked=true;$('#keepClan').checked=true;resetStudentsDialog.showModal()}
 async function resetStudentsValues(){const rx=$('#resetXp').checked,rm=$('#resetMp').checked,rc=$('#resetCp').checked,rg=$('#resetGc').checked,keepClass=$('#keepClass').checked,keepClan=$('#keepClan').checked;if(!rx&&!rm&&!rc&&!rg&&keepClass&&keepClan){alert('Nincs kiválasztva visszaállítandó érték.');return}for(const s of students){if(rx)s.xp=0;if(rm)s.mp=0;if(rc)s.cp=0;if(rg)s.gc=0;if(!keepClass)s.character_class=null;if(!keepClan)s.clan=''}cursedStudents.clear();usedSkills.clear();usedEndAbilities.clear();abilityRolls={};lessonStartXP=Object.fromEntries(students.map(s=>[s.key,s.xp]));logGroup(`RESET STUDENTS: ${$('#groupSelect').value} • ${[rx?'XP':null,rm?'MP':null,rc?'CP':null,rg?'Gold':null].filter(Boolean).join(', ')||'értékek változatlanok'} nullázva${keepClass?' • Class megtartva':' • Class törölve'}${keepClan?' • Clan megtartva':' • Clan törölve'}`,'SETTINGS');await saveCurrentStudents();saveDraft();render();resetStudentsDialog.close();statusEl.textContent='✓ Diákértékek visszaállítva'}
@@ -1050,27 +1054,14 @@ $('#resetStudentsBtn').onclick=openResetStudentsDialog;$('#resetStudentsCloseBtn
 $('#settingsBtn').onclick=()=>{renderSettingsDialog();settingsDialog.showModal();void renderUploadedTests()};$('#settingsCloseBtn').onclick=()=>settingsDialog.close();$('#saveSettingsBtn').onclick=saveRewardSettings;$('#refreshUploadedTestsBtn').onclick=renderUploadedTests;
 async function renderUploadedTests(){
  const group=$('#groupSelect').value;
- const [logs,lessons,importRecord]=await Promise.all([all('groupLogs'),all('lessons'),get('settings','testFileImportLog')]);
+ const [logs,lessons]=await Promise.all([all('groupLogs'),all('lessons')]);
  const normalize=line=>String(line||'').replace(/^\[[^\]]+\]\s*/,'').trim();
- const imports=(Array.isArray(importRecord?.value)?importRecord.value:[]).filter(x=>x.group===group);
- const testNameFromFilename=filename=>String(filename||'').replace(/^.*[\\/]/,'').replace(/\.(xlsx|xls|csv)$/i,'').trim();
- function importedNameFor(record,count){
-  const recordTime=Date.parse(record.timestamp||record.closed_at||'');
-  if(!Number.isFinite(recordTime))return '';
-  const candidates=imports.map(item=>({item,time:Date.parse(item.timestamp||'')}))
-   .filter(x=>Number.isFinite(x.time)&&x.time<=recordTime&&recordTime-x.time<=24*60*60*1000&&x.item.filename);
-  candidates.sort((a,b)=>{
-   const aCount=Number(a.item.matched)===Number(count)?0:1,bCount=Number(b.item.matched)===Number(count)?0:1;
-   return aCount-bCount||b.time-a.time;
-  });
-  return testNameFromFilename(candidates[0]?.item.filename);
- }
  const batches=logs.filter(x=>x.group===group&&x.category==='TEST_BATCH');
  const coveredByBatches=new Set(batches.flatMap(x=>(x.entries||[]).map(normalize)));
  const items=batches.map(x=>{
   const count=x.count||x.results?.length||0;
   const match=String(x.title||'').match(/(\d+)\s*%/);
-  return {timestamp:x.timestamp,mode:Number(x.mode)||Number(match?.[1])||0,testName:testNameFromFilename(x.filename)||importedNameFor(x,count)||'Test',count,entries:x.entries||[]};
+  return {timestamp:x.timestamp,mode:Number(x.mode)||Number(match?.[1])||0,testName:String(x.testName||'').trim(),count,entries:x.entries||[]};
  });
  const groupLessons=lessons.filter(x=>x.group===group);
  const lessonEntryTexts=new Set(groupLessons.flatMap(x=>(x.events||[]).map(normalize)));
@@ -1090,7 +1081,7 @@ async function renderUploadedTests(){
   for(const [key,testEntries] of byTest){
    const [time,mode]=key.split('|');
    const count=testEntries.length;
-   items.push({timestamp:record.timestamp||record.closed_at,mode:Number(mode)||0,testName:importedNameFor(record,count)||'Test',count,entries:testEntries});
+   items.push({timestamp:record.timestamp||record.closed_at,mode:Number(mode)||0,testName:'',count,entries:testEntries});
   }
  }
  for(const lesson of groupLessons)collectLegacy(lesson,lesson.events,'lesson');
@@ -1100,7 +1091,8 @@ async function renderUploadedTests(){
   const date=x.timestamp?new Date(x.timestamp).toLocaleString('hu-HU'):'';
   const details=(x.entries||[]).map(line=>normalize(line)).join('\n');
   const percent=`${x.mode||'—'}% test`;
-  return `<details class="history-item"><summary>${escapeHtml(date)} - ${escapeHtml(percent)} - ${escapeHtml(x.testName)} - ${x.count} students</summary><pre>${escapeHtml(details)}</pre></details>`;
+  const parts=[date,percent,x.testName,String(x.count)+' students'].filter(Boolean);
+  return `<details class="history-item"><summary>${parts.map(escapeHtml).join(' - ')}</summary><pre>${escapeHtml(details)}</pre></details>`;
  }).join(''):'<p>No test results have been recorded for this group yet.</p>';
 }
 async function showDuelLog(){const group=$('#groupSelect').value;const items=(await all('duelLogs')).filter(x=>x.group===group).sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''));$('#duelLogGroupLabel').textContent=group;$('#duelLogList').innerHTML=items.length?items.map(x=>`<details class="history-item"><summary>${new Date(x.timestamp).toLocaleString('hu-HU')} • ${x.player1?.name||''} vs ${x.player2?.name||''} • ${x.outcome==='TIE'?'TIE':'WIN: '+(x.winner||'')}</summary><pre>${x.message||''}</pre></details>`).join(''):'<p>Még nincs mentett Duel ebben a csoportban.</p>';duelLogDialog.showModal()}
