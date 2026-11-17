@@ -1051,9 +1051,9 @@ $('#settingsBtn').onclick=()=>{renderSettingsDialog();settingsDialog.showModal()
 async function renderUploadedTests(){
  const group=$('#groupSelect').value;
  const [logs,lessons,importRecord]=await Promise.all([all('groupLogs'),all('lessons'),get('settings','testFileImportLog')]);
- const normalize=line=>String(line||'').replace(/^\\[[^\\]]+\\]\\s*/,'').trim();
+ const normalize=line=>String(line||'').replace(/^\[[^\]]+\]\s*/,'').trim();
  const imports=(Array.isArray(importRecord?.value)?importRecord.value:[]).filter(x=>x.group===group);
- const testNameFromFilename=filename=>String(filename||'').replace(/^.*[\\\\/]/,'').replace(/\\.(xlsx|xls|csv)$/i,'').trim();
+ const testNameFromFilename=filename=>String(filename||'').replace(/^.*[\\/]/,'').replace(/\.(xlsx|xls|csv)$/i,'').trim();
  function importedNameFor(record,count){
   const recordTime=Date.parse(record.timestamp||record.closed_at||'');
   if(!Number.isFinite(recordTime))return '';
@@ -1069,7 +1069,7 @@ async function renderUploadedTests(){
  const coveredByBatches=new Set(batches.flatMap(x=>(x.entries||[]).map(normalize)));
  const items=batches.map(x=>{
   const count=x.count||x.results?.length||0;
-  const match=String(x.title||'').match(/(\\d+)\\s*%/);
+  const match=String(x.title||'').match(/(\d+)\s*%/);
   return {timestamp:x.timestamp,mode:Number(x.mode)||Number(match?.[1])||0,testName:testNameFromFilename(x.filename)||importedNameFor(x,count)||'Test',count,entries:x.entries||[]};
  });
  const groupLessons=lessons.filter(x=>x.group===group);
@@ -1078,10 +1078,10 @@ async function renderUploadedTests(){
   const byTest=new Map();
   for(const line of entries||[]){
    const normalized=normalize(line);
-   const match=normalized.match(/\\b(\\d+)% test,\\s*(?:grade|jegy)\\b/i);
+   const match=normalized.match(/\b(\d+)% test,\s*(?:grade|jegy)\b/i);
    if(!match||coveredByBatches.has(normalized))continue;
    if(source==='groupLog'&&lessonEntryTexts.has(normalized))continue;
-   const loggedTime=(String(line).match(/^\\[([^\\]]+)\\]/)||[])[1];
+   const loggedTime=(String(line).match(/^\[([^\]]+)\]/)||[])[1];
    const time=loggedTime||new Date(record.timestamp||record.closed_at).toLocaleTimeString('hu-HU');
    const key=`${time}| ${match[1]}`;
    if(!byTest.has(key))byTest.set(key,[]);
@@ -1098,7 +1098,7 @@ async function renderUploadedTests(){
  items.sort((a,b)=>String(b.timestamp||'').localeCompare(String(a.timestamp||'')));
  $('#uploadedTestsList').innerHTML=items.length?items.map(x=>{
   const date=x.timestamp?new Date(x.timestamp).toLocaleString('hu-HU'):'';
-  const details=(x.entries||[]).map(line=>normalize(line)).join('\\n');
+  const details=(x.entries||[]).map(line=>normalize(line)).join('\n');
   const percent=`${x.mode||'—'}% test`;
   return `<details class="history-item"><summary>${escapeHtml(date)} - ${escapeHtml(percent)} - ${escapeHtml(x.testName)} - ${x.count} students</summary><pre>${escapeHtml(details)}</pre></details>`;
  }).join(''):'<p>No test results have been recorded for this group yet.</p>';
