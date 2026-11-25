@@ -1311,7 +1311,7 @@ $('#settingsBtn').onclick=()=>{renderSettingsDialog();settingsDialog.showModal()
 async function renderUploadedTests(){
  await refreshUploadedTestLogsFromCloud();
  const group=$('#groupSelect').value;
- const [logs,lessons,importRecord]=await Promise.all([all('groupLogs'),all('lessons'),get('settings','testFileImportLog')]);
+ const [logs,importRecord]=await Promise.all([all('groupLogs'),get('settings','testFileImportLog')]);
  const normalize=line=>String(line||'').replace(/^\[[^\]]+\]\s*/,'').trim();
  const imports=(Array.isArray(importRecord?.value)?importRecord.value:[]).filter(x=>x.group===group);
  const testNameFromFilename=filename=>String(filename||'').replace(/^.*[\\/]/,'').replace(/\.(xlsx|xls|csv)$/i,'').trim();
@@ -1334,7 +1334,7 @@ async function renderUploadedTests(){
   const testName=String(x.testName||'').trim()||testNameFromFilename(x.filename)||importedNameFor(x,count);
   return {timestamp:x.timestamp,mode:Number(x.mode)||Number(match?.[1])||0,testName,count,entries:x.entries||[]};
  });
- const groupLessons=lessons.filter(x=>x.group===group);
+ const groupLessons=[];
  const lessonEntryTexts=new Set(groupLessons.flatMap(x=>(x.events||[]).map(normalize)));
  function collectLegacy(record,entries,source){
   const byTest=new Map();
