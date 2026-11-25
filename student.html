@@ -49,6 +49,7 @@ body.light-mode{--bg:#f3efe6;--panel:#fffaf1;--panel2:#f8f2e9;--text:#2e3042;--m
 .light-mode dialog{background:#fffaf4;border-color:#d5c8bb}.light-mode .ability{background:#f1e8df}.light-mode .skill{background:#f7f0e9}
 .theme-btn{min-width:100px}
 @media(max-width:700px){main{padding:14px}.stats{gap:5px}.stat strong{font-size:17px}}
+ .refresh-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.refresh-row #status{margin:0;flex:1}.refresh-row #lastRefresh{font-size:11px;color:var(--muted)}
 </style><style id="studentPetFoodStyles">
 .card .stats,#profile .stats{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important}
 .card .stat,#profile .stat{min-width:0;padding:8px 2px!important}
@@ -78,7 +79,7 @@ button:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
 <body>
 <header><div><h1>Caerusia</h1><div class="sub">Fantasy English – Student View • Read Only</div></div>
 <div class="controls"><img id="groupPhotoHeader" class="group-photo-header" alt="Group photo" hidden><label>Group<select id="group"></select></label><button id="tiles" class="active">▦ Tiles</button><button id="list">☰ List</button><button id="themeToggle" class="theme-btn" type="button">☀ Light</button></div></header>
-<main id="main"><div id="status">Loading data…</div><div id="grid" class="grid"></div></main>
+<main id="main"><div class="refresh-row"><div id="status">Saved data is shown until the next scheduled refresh.</div><button id="refreshStudentBtn" type="button">Refresh from server</button><span id="lastRefresh"></span></div><div id="grid" class="grid"></div></main>
 <dialog id="profile"><div class="dhead"><div><h2 id="pn"></h2><div id="ps" class="school"></div></div><button class="close" onclick="profile.close()">Close</button></div><div id="pb"></div></dialog>
 <script>
 const URL='https://uwfsvthabxmoxmvmdali.supabase.co', KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3ZnN2dGhhYnhtb3htdm1kYWxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MzgzNDMsImV4cCI6MjEwNDQxNDM0M30.Y3NyRvV1mG3ZbKN1JKJu4a51TA2pAbbeU478YdHAods';
@@ -96,18 +97,38 @@ function level(xp){let l=1;for(const [n,t] of LEVELS)if((xp||0)>=t)l=n;return l}
 function grp(s){return s.group || (s.key||'').split('|')[0] || 'Csoport'}
 function updateGroupPhoto(){const g=document.getElementById('group').value,record=appSettings.find(x=>x.key==='groupPhoto|'+g),src=record?.value?.dataUrl||'',img=document.getElementById('groupPhotoHeader');img.src=src;img.hidden=!src}
 function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function load(){
+async function load({manual=false,slot='manual'}={}){
  try{
-  const r=await fetch(URL+'/rest/v1/app_state?id=eq.main&select=data,updated_at',{headers:{apikey:KEY,Authorization:'Bearer '+KEY},cache:'no-store'});
+  const r=await fetch(URL+'/rest/v1/app_state?id=eq.main&select=students:data->students,settings:data->settings,updated_at',{headers:{apikey:KEY,Authorization:'Bearer '+KEY},cache:'no-store'});
   if(!r.ok)throw new Error('Cloud error: '+r.status);
-  const row=(await r.json())[0]; students=row?.data?.students||[];appSettings=row?.data?.settings||[];
+  const row=(await r.json())[0]||{};students=row.students||[];appSettings=row.settings||[];
+  localStorage.setItem('caerusiaStudentCache',JSON.stringify({students,settings:appSettings,updated_at:row.updated_at||'',saved_at:Date.now()}));
   groups=[...new Set(students.map(grp))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'hu'));
-  const sel=document.getElementById('group'); const oldGroup=sel.value; sel.innerHTML=groups.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');
+  const sel=document.getElementById('group'),oldGroup=sel.value;
+  sel.innerHTML=groups.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');
   if(groups.includes(oldGroup))sel.value=oldGroup;
   sel.onchange=()=>{updateGroupPhoto();render()};updateGroupPhoto();render();
-  document.getElementById('status').textContent='Last cloud update: '+(row?.updated_at?new Date(row.updated_at).toLocaleString('en-GB'):'–');
+  document.getElementById('status').textContent='Last cloud update: '+(row.updated_at?new Date(row.updated_at).toLocaleString('en-GB'):'–');
+  if(manual)document.getElementById('lastRefresh').textContent='Refreshed manually';
  }catch(e){document.getElementById('status').textContent='Unable to load data: '+e.message}
 }
+function restoreStudentCache(){
+ try{const cached=JSON.parse(localStorage.getItem('caerusiaStudentCache')||'null');if(!cached)return false;students=cached.students||[];appSettings=cached.settings||[];groups=[...new Set(students.map(grp))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'hu'));const sel=document.getElementById('group');sel.innerHTML=groups.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');sel.onchange=()=>{updateGroupPhoto();render()};updateGroupPhoto();render();document.getElementById('status').textContent='Showing saved data. Use Refresh to update.';if(cached.updated_at)document.getElementById('lastRefresh').textContent='Last server update: '+new Date(cached.updated_at).toLocaleString('en-GB');return true}catch(_){return false}
+}
+function budapestParts(date){const p=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Budapest',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date).map(x=>[x.type,x.value]));return {y:+p.year,m:+p.month,d:+p.day,h:+p.hour,min:+p.minute}}
+function nextBudapestRefresh(){
+ const now=new Date(),p=budapestParts(now),rounded=Date.now()-now.getSeconds()*1000-now.getMilliseconds(),offset=Date.UTC(p.y,p.m-1,p.d,p.h,p.min)-rounded;
+ let target=[8,16].map(h=>Date.UTC(p.y,p.m-1,p.d,h,0)-offset).find(t=>t>Date.now()+1000);
+ if(!target){const tomorrow=new Date(Date.UTC(p.y,p.m-1,p.d+1));target=Date.UTC(tomorrow.getUTCFullYear(),tomorrow.getUTCMonth(),tomorrow.getUTCDate(),8)-offset}
+ return target
+}
+function scheduleStudentRefresh(){
+ clearTimeout(window.caerusiaRefreshTimer);
+ const target=nextBudapestRefresh();
+ window.caerusiaRefreshTimer=setTimeout(async()=>{const p=budapestParts(new Date()),slot=`${p.y}-${p.m}-${p.d}-${p.h}`;if([8,16].includes(p.h)&&p.min<2&&localStorage.getItem('caerusiaLastAutoSlot')!==slot){localStorage.setItem('caerusiaLastAutoSlot',slot);await load({slot})}scheduleStudentRefresh()},Math.max(1000,target-Date.now()+1200))
+}
+document.getElementById('refreshStudentBtn').onclick=()=>load({manual:true});
+if(!restoreStudentCache())document.getElementById('status').textContent='No saved data yet. Press Refresh from server.';scheduleStudentRefresh();
 function render(){
  const g=document.getElementById('group').value;
  const arr=students.filter(s=>grp(s)===g).sort((a,b)=>(a.name||'').localeCompare(b.name||'','hu'));
@@ -129,5 +150,5 @@ const themeToggle=document.getElementById('themeToggle');
 function setTheme(light){document.body.classList.toggle('light-mode',light);themeToggle.textContent=light?'☾ Dark':'☀ Light';localStorage.setItem('caerusiaStudentTheme',light?'light':'dark')}
 setTheme((localStorage.getItem('caerusiaStudentTheme')|| (window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'))==='light');
 themeToggle.onclick=()=>setTheme(!document.body.classList.contains('light-mode'));
-load(); setInterval(load,30000);
+
 </script></body></html>
